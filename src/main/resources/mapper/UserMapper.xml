@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+    UserMapper.xml - 사용자 관련 데이터베이스 연산을 정의하는 MyBatis XML 매퍼 파일
+    
+    MyBatis는 SQL 매핑 프레임워크로, 이 파일에서 다음과 같은 작업을 수행합니다:
+    1. SQL 쿼리 정의
+    2. 데이터베이스 컬럼과 Java 객체 필드 매핑
+    3. CRUD (Create, Read, Update, Delete) 연산 구현
+    
+    namespace: UserRepository 인터페이스와 연결되어 메서드와 SQL을 매핑
+-->
+<mapper namespace="com.moklab.apiservice.repository.UserRepository">
+        <!-- 
+        ResultMap: 데이터베이스 테이블의 컬럼과 Java 객체의 필드를 매핑하는 설정
+        - 데이터베이스에서 조회한 결과를 User 객체로 변환할 때 사용
+        - column: 데이터베이스 컬럼명
+        - property: Java 객체의 필드명
+    -->
+        <resultMap id="UserResultMap" type="com.moklab.apiservice.entity.User">
+                <!-- id: 기본 키(Primary Key) 매핑 -->
+                <id column="id" property="id"/>
+                <!-- result: 일반 필드 매핑 -->
+                <result column="username" property="username"/>
+                <result column="password" property="password"/>
+                <result column="email" property="email"/>
+                <!-- 
+            typeHandler: Enum 타입을 데이터베이스 문자열로 변환
+            Role enum(USER, ADMIN)을 VARCHAR로 저장하고 조회할 때 다시 enum으로 변환
+        -->
+                <result column="role" property="role" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+                <result column="enabled" property="enabled"/>
+        </resultMap>
+        <!-- 
+        사용자명으로 사용자 조회
+        - 로그인 시 사용자 인증을 위해 사용
+        - #{username}: MyBatis 파라미터 바인딩 (PreparedStatement로 SQL Injection 방지)
+        - resultMap: 조회 결과를 UserResultMap으로 매핑하여 User 객체 생성
+    -->
+        <select id="findByUsername" resultMap="UserResultMap">
+        SELECT * FROM users WHERE username = #{username}
+    </select>
+        <!-- 
+        이메일로 사용자 조회
+        - 회원가입 시 이메일 중복 체크나 비밀번호 찾기 등에 사용
+    -->
+        <select id="findByEmail" resultMap="UserResultMap">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+        <!-- 
+        사용자명 존재 여부 확인
+        - 회원가입 시 사용자명 중복 체크를 위해 사용
+        - COUNT(*) > 0: 해당 사용자명이 존재하면 true, 없으면 false 반환
+        - resultType="boolean": 결과를 boolean 타입으로 반환
+    -->
+        <select id="existsByUsername" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM users WHERE username = #{username}
+    </select>
+        <!-- 
+        이메일 존재 여부 확인
+        - 회원가입 시 이메일 중복 체크를 위해 사용
+    -->
+        <select id="existsByEmail" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM users WHERE email = #{email}
+    </select>
+        <!-- 
+        새로운 사용자 등록 (회원가입)
+        - useGeneratedKeys="true": 데이터베이스에서 자동 생성된 ID 값을 받아옴
+        - keyProperty="id": 생성된 ID를 User 객체의 id 필드에 설정
+        - 회원가입 후 바로 생성된 사용자 ID를 사용할 수 있음
+    -->
+        <insert id="save" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, password, email, role, enabled)
+        VALUES (#{username}, #{password}, #{email}, #{role}, #{enabled})
+    </insert>
+        <!-- 
+        ID로 사용자 조회
+        - 특정 사용자의 상세 정보를 조회할 때 사용
+        - 관리자 기능이나 프로필 조회 등에 활용
+    -->
+        <select id="findById" resultMap="UserResultMap">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+        <!-- 
+        사용자 정보 업데이트
+        - 프로필 수정, 비밀번호 변경, 권한 변경 등에 사용
+        - WHERE id = #{id}: 특정 사용자만 업데이트하도록 제한
+    -->
+        <update id="update">
+        UPDATE users SET 
+            username = #{username},
+            password = #{password},
+            email = #{email},
+            role = #{role},
+            enabled = #{enabled}
+        WHERE id = #{id}
+    </update>
+        <!-- 
+        사용자 삭제
+        - 회원 탈퇴나 관리자의 사용자 삭제 기능에 사용
+        - 실제 프로덕션에서는 물리적 삭제보다 enabled=false로 논리적 삭제를 권장
+    -->
+        <delete id="deleteById">
+        DELETE FROM users WHERE id = #{id}
+    </delete>
+</mapper>
